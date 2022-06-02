@@ -8,57 +8,55 @@ namespace AI_Project
 {
     internal class Neuron
     {
-        List<Neuron> _inputNeurons;
-        List<double> _inputWages;
-
-        List<Neuron> _outNeurons = new List<Neuron>();
-        List<double> _outWages = new List<double>();
 
         public double value;
-        public bool wasActivated;
 
         public double err;
 
-        public bool IsInput;
-        public bool IsOut;
-
         public int ID;
 
-        private float _beta;
+        private double _beta;
 
         static int neuron_counter = 0;
 
-        public Neuron(List<Neuron> input_layer, List<double> in_wages, float beta, bool is_inut, bool is_out)
+        public Neuron(float beta)
         {
             ID = neuron_counter++;
-            _inputNeurons = input_layer;
-            _inputWages = in_wages;
-            IsInput = is_inut;
-            IsOut = is_out;
             value = 0;
-            wasActivated = false;
             _beta = beta;
             err = 0;
         }
 
-        public void Activate ()
+        static public double DotProduct (Neuron[] in_neurons, double[] in_weights)
         {
             double inputs_sum = 0;
 
-            for (int i = 0; i < _inputNeurons.Count; i++)
+            for (int i = 0; i < in_neurons.Count(); i++)
             {
-                double n_value = _inputNeurons[i].value * _inputWages[i];
-                inputs_sum += n_value;
-
-                if (_inputNeurons.Count < _inputNeurons.Count)
-                {
-                    _inputNeurons.Add(_inputNeurons[i]);
-                    _inputWages.Add(_inputWages[i]);
-                }
+                inputs_sum += in_neurons[i].value * in_weights[i];
             }
+            return inputs_sum;
+        }
 
-            value = 1 / (1 + Math.Exp(- _beta * inputs_sum));
-            wasActivated = value > 0;
+       public double Sigmoid ()
+        {
+            return 1.0 / (1.0 + Math.Exp(-value * _beta));
+        }
+
+        public double SidmoidDerr ()
+        {
+            return Sigmoid() * (1 - Sigmoid());
+        }
+
+        public double Activate (double result)
+        {
+            value = result;
+            return Sigmoid();
+        }
+
+        public double CalcDeltaWeight (double raw_input, double niu)
+        {
+            return niu * err * SidmoidDerr() * raw_input;
         }
     }
 }

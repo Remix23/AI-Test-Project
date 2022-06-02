@@ -9,6 +9,7 @@ namespace AI_Project
     internal class Network
     {
         List<List<Neuron>> _layers;
+        double[] _biases;
 
         int _numOfLayers;
         int[] _numOfNeurons;
@@ -18,7 +19,7 @@ namespace AI_Project
 
         public Network (int num_of_layers, int[] num_of_neurons, int[] possible_outputs)
         {
-            if (num_of_neurons.Length != num_of_layers) throw new ArgumentException("The number o layers does not match with the lenght of list");
+            if (num_of_neurons.Length != num_of_layers) throw new ArgumentException("The number of layers does not match with the lenght of list");
 
             _numOfLayers = num_of_layers;
             _numOfNeurons = num_of_neurons;
@@ -33,7 +34,7 @@ namespace AI_Project
             {
                 foreach (Neuron neuron in layer)
                 {
-                    if (neuron.IsInput) { neuron.value = inputs[layer.IndexOf(neuron)]; continue; }
+                    if (neuron.IsInput) { neuron.value = inputs[layer.IndexOf(neuron)]; continue; } // loading data to the input layer
 
                     neuron.Activate();                    
                 }
@@ -69,9 +70,37 @@ namespace AI_Project
             }
         }
 
-        private int _propagate ()
+        private void _propagateErr ()
         {
-            return 0;
+            for (int layer_num = _layers.Count() - 1; layer_num >= 0; layer_num--)
+            {
+                for (int n_num = 0; n_num < _numOfNeurons[layer_num]; n_num++)
+                {
+                    Neuron current_neuron = _layers[layer_num][n_num];
+                    double err_sum = 0;
+                    foreach (Neuron n in _layers[layer_num + 1])
+                    {
+                        err_sum += n.err * 
+
+                    }
+                }
+            }
+        }
+
+        private double calcProbeErr (double[] networkAnswers, int correctAnswerIndex)
+        {
+            double sum = 0;
+            for (int i = 0; i < _possibleOutputs.Count(); i++)
+            {
+                if (_possibleOutputs[i] == _possibleOutputs[correctAnswerIndex])
+                {
+                    sum += Math.Pow(networkAnswers[i] - 1.0, 2); // was correctly guesses
+                } else
+                {
+                    sum += Math.Pow(networkAnswers[i], 2);
+                }
+            }
+            return sum;
         }
         
         private void _genNetwork ()
@@ -93,9 +122,12 @@ namespace AI_Project
 
                 // gen wages 
                 List<double> wages = new List<double>();
-                for (int j = 0; j < _numOfNeurons[layer_num]; j++)
+                if (layer_num > 0)
                 {
-                    wages.Add (_random.NextDouble ());
+                    for (int j = 0; j < _numOfNeurons[layer_num - 1]; j++)
+                    {
+                        wages.Add(_random.NextDouble());
+                    }
                 }
 
                 // check if the neuron is in the first or last layer
@@ -104,6 +136,15 @@ namespace AI_Project
                 layer.Add(n);
             }
             _layers.Add(layer);
+        }
+
+        private void _genBiases ()
+        {
+            _biases = new double[_numOfLayers];
+            for (int i = 0; i < _numOfLayers; i++)
+            {
+                _biases[i] = _random.NextDouble();
+            }
         }
     }
 }
