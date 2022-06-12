@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,19 +15,22 @@ namespace AI_Project
             int[] num_of_neurons_layer = { 10, 3, 1 };
             int[] possible_outputs = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
             Network Test = new Network(num_of_layers, num_of_neurons_layer, possible_outputs);
-            Test.PrintLayers();
+            Test.PrintWeights();
 
-            Random _rng = new Random();
+/*            Random _rng = new Random();
 
             double[] inputs = new double[10];
             for (int i = 0; i < inputs.Count(); i++)
             {
                 inputs[i] = (double)i / 100.0;
-            }
+            }*/
 
-            Test._process(inputs);
+            string imgs = "train-images.idx3-ubyte";
+            string labels = "train-labels.idx1-ubyte";
 
-            Test.PrintLayers();
+            List<IMGObj> dataset = MNISTReader.ReadMNISTISet(imgs, labels, 50);
+
+            Console.WriteLine($"Dataset lenght: {dataset.Count()}");
 
             Console.Read();
         }

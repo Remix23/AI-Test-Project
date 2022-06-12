@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AI_Project
 {
     internal class Network
     {
-        List<List<Neuron>> _layers;
+        List<Layer> _layers;
         double[] _biases;
 
         int _numOfLayers;
@@ -17,7 +15,7 @@ namespace AI_Project
 
         Random _random = new Random();
 
-        public Network (int num_of_layers, int[] num_of_neurons, int[] possible_outputs)
+        public Network (int num_of_layers, int[] num_of_neurons, int[] possible_outputs, double[] biases = null)
         {
             if (num_of_neurons.Length != num_of_layers) throw new ArgumentException("The number of layers does not match with the lenght of list");
 
@@ -25,87 +23,95 @@ namespace AI_Project
             _numOfNeurons = num_of_neurons;
             _possibleOutputs = possible_outputs;
 
+            if (biases != null)
+            {
+                _biases = biases;
+            } else
+            {
+                _genBiases();
+            }
+            
             _genNetwork();
         }
 
-        public int _process (double[] inputs)
+        private void _getInput (byte[] inputs)
         {
-            foreach (List<Neuron> layer in _layers)
+            for (int i = 0; i < _numOfNeurons[0]; i++)
             {
-                foreach (Neuron neuron in layer)
-                {
-                    if (neuron.IsInput) { neuron.value = inputs[layer.IndexOf(neuron)]; continue; } // loading data to the input layer
-
-                    neuron.Activate();                    
-                }
+                _layers.First().Neurons[i].value = (double)inputs[i];
             }
-            Neuron result_neuron = _layers.Last().First();
-            foreach (Neuron out_neuron in _layers.Last().Skip(1))
-            {
-                if (out_neuron.value > result_neuron.value) result_neuron = out_neuron;
-            }
-            return _possibleOutputs[_layers.Last().IndexOf(result_neuron)];
         }
 
-        public void Learn (List<double[]> inputs, List<short> outputs)
+        public int ProcessInput (byte[] inputs)
         {
-            for (int i = 0; i < inputs.Count; i++)
+            _getInput(inputs); // store the input in the first layer of the network 
+            for (int i = 1; i < _numOfLayers; i++)
             {
-                double[] entry = inputs[i];
-                short desired_out = outputs[i];
+                _layers[i].Activate(_layers[i - 1].Neurons);
+            }
 
-                int result = _process(entry);
+            // chose the biggest value in the last layer
+            int max_value_index = 0;
+            Layer last_layer = _layers.Last();
+            for (int i = 1; i < last_layer.NumOfNeurons; i++)
+            {
+                if (last_layer.Neurons[i].value > last_layer.Neurons[max_value_index].value) max_value_index = i;
+            }
+            return max_value_index;
+        }
 
+        public void Learn (List<IMGObj> dataset)
+        {
+            for (int i = 0; i < dataset.Count; i++)
+            {
+                int result_index = ProcessInput(dataset[i].pixels);
+                int network_out = _possibleOutputs[result_index];
+
+                int correct_answer_index = Array.IndexOf(_possibleOutputs, (int)dataset[i].label);
+                _propagateErr(correct_answer_index);
+                _updateWeights();
             }
         }
 
         public void PrintLayers ()
         {
-            foreach (List<Neuron> layer in _layers)
+            foreach (Layer layer in _layers)
             {
-                foreach (Neuron n in layer)
+                foreach (Neuron n in layer.Neurons)
                 {
-                    Console.WriteLine($"ID: {n.ID} Layer: {_layers.IndexOf(layer)} WasActivated: {n.wasActivated} Value: {n.value}");
+                    Console.WriteLine($"ID: {n.ID} Layer: {_layers.IndexOf(layer)} Value: {n.value} Err: {n.err}");
                 }
             }
         }
 
-        private void _propagateErr ()
+        public void PrintWeights ()
         {
-            for (int layer_num = _layers.Count() - 1; layer_num >= 0; layer_num--)
+            for (int i = 1; i < _layers.Count;i++)
             {
-                for (int n_num = 0; n_num < _numOfNeurons[layer_num]; n_num++)
-                {
-                    Neuron current_neuron = _layers[layer_num][n_num];
-                    double err_sum = 0;
-                    foreach (Neuron n in _layers[layer_num + 1])
-                    {
-                        err_sum += n.err * 
-
-                    }
-                }
+                _layers[i].PrintWeights(i);
             }
         }
 
-        private double calcProbeErr (double[] networkAnswers, int correctAnswerIndex)
+        private void _propagateErr (int correct_answer_index)
         {
-            double sum = 0;
-            for (int i = 0; i < _possibleOutputs.Count(); i++)
+            _layers.Last().CalcFinalErr(correct_answer_index);
+            for (int i = _numOfLayers - 2; i <= 0; i--)
             {
-                if (_possibleOutputs[i] == _possibleOutputs[correctAnswerIndex])
-                {
-                    sum += Math.Pow(networkAnswers[i] - 1.0, 2); // was correctly guesses
-                } else
-                {
-                    sum += Math.Pow(networkAnswers[i], 2);
-                }
+                _layers[i].CollectErr(_layers[i + 1]);
             }
-            return sum;
+        }
+
+        private void _updateWeights ()
+        {
+            for (int i = 1; i < _numOfLayers; i++)
+            {
+                _layers[i].UpdateWeights(_layers[i - 1].Neurons);
+            }
         }
         
         private void _genNetwork ()
         {
-            _layers = new List<List<Neuron>>();
+            _layers = new List<Layer> ();
             for (int i = 0; i < _numOfLayers; i++)
             {
                 _genLayer (i);
@@ -114,28 +120,34 @@ namespace AI_Project
 
         private void _genLayer (int layer_num)
         {
-            List<Neuron> layer = new List<Neuron>();
+            // gen beta attribute
+            double beta = _random.NextDouble();
+
+            Neuron[] neurons = new Neuron[_numOfNeurons[layer_num]];
+
+            double[][] weighs = new double[_numOfNeurons[layer_num]][];
             for (int i = 0; i < _numOfNeurons[layer_num]; i++)
             {
                 // gen neuron 
-                List<Neuron> inputs = layer_num != 0 ? _layers[layer_num - 1] : new List<Neuron>();
+                neurons[i] = new Neuron((float)beta);
 
                 // gen wages 
-                List<double> wages = new List<double>();
+                
                 if (layer_num > 0)
                 {
+                    weighs[i] = new double[_numOfNeurons[layer_num - 1]];
                     for (int j = 0; j < _numOfNeurons[layer_num - 1]; j++)
                     {
-                        wages.Add(_random.NextDouble());
+                        weighs[i][j] = _random.NextDouble();
                     }
+                } else
+                {
+                    weighs[i] = new double[0];
                 }
-
-                // check if the neuron is in the first or last layer
-                Neuron n = new Neuron(inputs, wages, (float) _random.NextDouble(), layer_num == 0, layer_num == _numOfLayers - 1);
-
-                layer.Add(n);
             }
-            _layers.Add(layer);
+            bool is_in = layer_num == 0;
+            bool is_out = layer_num == _numOfLayers - 1;
+            _layers.Add(new Layer(_numOfNeurons[layer_num], neurons, weighs, is_in, is_out, 0, _biases[layer_num]));
         }
 
         private void _genBiases ()
