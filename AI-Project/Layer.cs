@@ -31,7 +31,7 @@ namespace AI_Project
         {
             for (int neuron_count = 0; neuron_count < NumOfNeurons; neuron_count++)
             {
-                Neurons[neuron_count].Activate(Neuron.DotProduct(in_neutrons, Weights[neuron_count]));
+                Neurons[neuron_count].Activate(in_neutrons, Weights[neuron_count]);
             }
         }
 
@@ -86,7 +86,7 @@ namespace AI_Project
             {
                 for (int j = 0; j < Weights[i].Count(); j++)
                 {
-                    Console.WriteLine($"layer: {layer_num - 1} neuron: {j} <- {Weights[i][j]} -> neuron: {i} layer: {layer_num}");
+                    Console.WriteLine($"layer: {layer_num} neuron: {i} <- {Weights[i][j]} -> neuron: {j} layer: {layer_num - 1}");
                 }
             }
         }

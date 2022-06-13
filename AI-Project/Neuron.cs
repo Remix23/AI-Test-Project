@@ -38,25 +38,25 @@ namespace AI_Project
             return inputs_sum;
         }
 
-       public double Sigmoid ()
+        static public double Sigmoid (double value, double beta)
         {
-            return 1.0 / (1.0 + Math.Exp(-value * _beta));
+            return 1.0 / (1.0 + Math.Exp(-value * beta));
         }
 
-        public double SidmoidDerr ()
+        static public double SidmoidDerr (double value, double beta)
         {
-            return Sigmoid() * (1 - Sigmoid());
+            return Sigmoid(value, beta) * (1 - Sigmoid(value, beta));
         }
 
-        public double Activate (double result)
+        public double Activate (Neuron[] in_neurons, double[] in_weighs)
         {
-            value = result;
-            return Sigmoid();
+            value = Sigmoid(DotProduct(in_neurons, in_weighs), _beta);
+            return value;
         }
 
         public double CalcDeltaWeight (double raw_input, double niu)
         {
-            return niu * err * SidmoidDerr() * raw_input;
+            return niu * err * SidmoidDerr(value, _beta) * raw_input;
         }
     }
 }

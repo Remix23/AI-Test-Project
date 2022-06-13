@@ -60,8 +60,9 @@ namespace AI_Project
             return max_value_index;
         }
 
-        public void Learn (List<IMGObj> dataset)
+        public double Learn (List<IMGObj> dataset)
         {
+            double total_cost = 0;
             for (int i = 0; i < dataset.Count; i++)
             {
                 int result_index = ProcessInput(dataset[i].pixels);
@@ -71,6 +72,7 @@ namespace AI_Project
                 _propagateErr(correct_answer_index);
                 _updateWeights();
             }
+            return total_cost / dataset.Count; // return the average cost (err) of test
         }
 
         public void PrintLayers ()
@@ -95,7 +97,7 @@ namespace AI_Project
         private void _propagateErr (int correct_answer_index)
         {
             _layers.Last().CalcFinalErr(correct_answer_index);
-            for (int i = _numOfLayers - 2; i <= 0; i--)
+            for (int i = _numOfLayers - 2; i >= 0; i--)
             {
                 _layers[i].CollectErr(_layers[i + 1]);
             }
@@ -139,6 +141,8 @@ namespace AI_Project
                     for (int j = 0; j < _numOfNeurons[layer_num - 1]; j++)
                     {
                         weighs[i][j] = _random.NextDouble();
+                        if (_random.NextDouble() > 0.5) weighs[i][j] *= -1;
+                        
                     }
                 } else
                 {
@@ -147,7 +151,7 @@ namespace AI_Project
             }
             bool is_in = layer_num == 0;
             bool is_out = layer_num == _numOfLayers - 1;
-            _layers.Add(new Layer(_numOfNeurons[layer_num], neurons, weighs, is_in, is_out, 0, _biases[layer_num]));
+            _layers.Add(new Layer(_numOfNeurons[layer_num], neurons, weighs, is_in, is_out, 0.5, _biases[layer_num]));
         }
 
         private void _genBiases ()
@@ -156,6 +160,22 @@ namespace AI_Project
             for (int i = 0; i < _numOfLayers; i++)
             {
                 _biases[i] = _random.NextDouble();
+            }
+        }
+
+        public void PrintStructure ()
+        {
+            for (int i = 0; i < _numOfLayers;i++)
+            {
+                Layer l = _layers[i];
+                Console.WriteLine($"Layer nr: {_layers.IndexOf(l)}");
+
+                for (int j = 0; j < l.NumOfNeurons; j++)
+                {
+                    int total_connections = l.Weights[j].Length;
+                    if (_layers.IndexOf(l) != _numOfLayers - 1) total_connections += _layers[i + 1].NumOfNeurons;
+                    Console.WriteLine($"Neuron nr: {j} num of connection: {total_connections} ({l.Weights[j].Length} - input; {total_connections - l.Weights[j].Length} - output)");
+                }
             }
         }
     }
